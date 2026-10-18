@@ -23,6 +23,10 @@ Claude     Grok          DeepSeek    Claude     Grok       code         Claude
 plan.md    tests (RED)   diff.patch  review.md  verify.json memory/      improve.md
 ```
 
+**For AI agents:** [llms.txt](llms.txt) is the machine-readable summary and
+[AGENTS.md](AGENTS.md) has the repository rules. Install with `npx sag-cli`;
+try it without credentials with `sag demo`.
+
 ---
 
 ## Install

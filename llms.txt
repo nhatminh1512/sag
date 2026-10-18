@@ -1,0 +1,41 @@
+# sag
+
+> sag is a per-repo agent harness: one command runs a coding task through seven
+> named agents (plan, write-test, execute, review, verify, remember, improve),
+> each backed by a different CLI and model, with file handoff, self-checks, a
+> human gate, and task-level recursion that adopts a harness only when it wins
+> on behaviour.
+
+## Install
+
+- npm: `npx sag-cli` or `npm install -g sag-cli`
+- shell: `curl -fsSL https://raw.githubusercontent.com/nhatminh1512/sag/main/install.sh | sh`
+- source: `git clone https://github.com/nhatminh1512/sag.git`
+
+## Use
+
+- `cd <repo> && sag setup` — detect CLIs, choose CLI + model per step, write `.sag/`
+- `sag check` — preflight
+- `sag` — prompt for a task, then run all seven steps
+- `sag "task" --auto` — non-interactive
+- `sag --k 2` — task-level recursion (propose → probe → compose → reflect)
+- `sag report` — summarize the latest run
+- `sag demo` — dry run, no model calls, no credentials
+
+## Key facts
+
+- Seven steps; each step is a separate process with a fresh context.
+- Handoff is files under `.sag/runs/<id>/` (plan.md, test-plan.md, diff.patch,
+  review.md, verify.json, test-output.txt).
+- Per-repo harness: `.sag/harness/skills/<step>/SKILL.md`.
+- Supported CLIs: `claude`, `grok`, `dsh`, `codex`, `opencode`, `gemini`,
+  `aider`, `qwen`, `cursor-agent`, plus any custom CLI described in config.
+- Guardrails: tests must be RED before execute; verify must agree with review.
+- License: MIT.
+- Tests: `python3 -m unittest discover -s tests`.
+
+## Links
+
+- [README](https://github.com/nhatminh1512/sag#readme)
+- [npm package](https://www.npmjs.com/package/sag-cli)
+- [License](https://github.com/nhatminh1512/sag/blob/main/LICENSE)

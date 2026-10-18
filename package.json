@@ -8,6 +8,8 @@
   "files": [
     "bin/",
     "install.sh",
+    "llms.txt",
+    "AGENTS.md",
     "sag.py",
     "orchestrator.py",
     "clis.py",
