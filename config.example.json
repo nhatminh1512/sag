@@ -1,0 +1,37 @@
+{
+  "repo": "/path/to/your/repo",
+  "domain": "my-project",
+  "test_cmd": "python3 -m pytest -q",
+  "steps": {
+    "plan": {
+      "cli": "claude",
+      "permission": "acceptEdits"
+    },
+    "write-test": {
+      "cli": "grok",
+      "permission": "auto"
+    },
+    "execute": {
+      "cli": "dsh",
+      "permission": "auto",
+      "model": "deepseek-flash"
+    },
+    "review": {
+      "cli": "claude",
+      "permission": "acceptEdits"
+    },
+    "verify": {
+      "cli": "grok",
+      "permission": "auto"
+    },
+    "remember": {
+      "cli": "none"
+    },
+    "improve": {
+      "cli": "claude",
+      "permission": "acceptEdits"
+    }
+  },
+  "gates": ["execute"],
+  "timeout_s": 900
+}

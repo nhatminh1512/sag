@@ -1,0 +1,25 @@
+# generated state — never commit
+runs/
+memory/
+.sag/
+plan.md
+test-plan.md
+execution.md
+review.md
+verify.json
+verify.md
+improve.md
+diff.patch
+test-output*.txt
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# local config (see config.example.json)
+config.json
+
+# logs
+*.log
