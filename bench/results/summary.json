@@ -1,0 +1,18 @@
+{
+  "single": {
+    "n": 8,
+    "claims": 8,
+    "false_passes": 0,
+    "false_pass_rate": 0.0,
+    "unwired_tests": 0,
+    "median_seconds": 34.1
+  },
+  "sag": {
+    "n": 6,
+    "claims": 6,
+    "false_passes": 0,
+    "false_pass_rate": 0.0,
+    "unwired_tests": 0,
+    "median_seconds": 193.9
+  }
+}

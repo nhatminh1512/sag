@@ -24,5 +24,8 @@ config.json
 # logs
 *.log
 
+# benchmark working copies (keep the raw jsonl + rendered results)
+bench/runs/
+
 # personal docs (kept local, not published)
 HUONG_DAN_SU_DUNG.md

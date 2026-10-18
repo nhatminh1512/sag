@@ -432,6 +432,17 @@ python3 -m unittest discover -s tests -v
 - **Ties keep the baseline.** A harness edit must win on evidence to be adopted.
 - **No auto-commit.** The pipeline produces artifacts; the human ships them.
 
+## Evidence
+
+`bench/` compares one agent doing everything against the pipeline on the same
+ten tasks, with a blind judge.
+
+Pilot (2026-10-18, Claude for every step): **0 false passes in either arm** on
+the tasks both arms completed, and the pipeline was ~5.7× slower (3m 14s vs 34s
+median). The benchmark did not reproduce the failure mode on small, unambiguous
+tasks — see [`bench/README.md`](bench/README.md) for the raw result and the
+limitations.
+
 ## Limitations
 
 - Sequential, one task at a time.
