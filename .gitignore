@@ -23,3 +23,6 @@ config.json
 
 # logs
 *.log
+
+# personal docs (kept local, not published)
+HUONG_DAN_SU_DUNG.md
