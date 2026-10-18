@@ -195,6 +195,24 @@ Requirements:
   described in the step config
 - A git repository to work in
 
+### With npx
+
+```bash
+npx github:nhatminh1512/sag --help
+npx github:nhatminh1512/sag setup
+```
+
+Install it as a command:
+
+```bash
+npm install -g github:nhatminh1512/sag
+```
+
+npx carries only the launcher; Python 3.10+ must still be on `PATH`
+(`SAG_PYTHON` overrides the interpreter).
+
+### From source
+
 ```bash
 git clone git@github.com:nhatminh1512/sag.git
 cd sag
