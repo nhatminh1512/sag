@@ -195,6 +195,27 @@ Requirements:
   described in the step config
 - A git repository to work in
 
+### One line
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nhatminh1512/sag/main/install.sh | sh
+```
+
+Downloads the repo tarball (no git), installs to `~/.local/share/sag`, links
+`~/.local/bin/sag`, and checks that it runs.
+
+```bash
+SAG_HOME=/opt/sag SAG_BIN=~/.local/bin sh install.sh   # overrides
+sh install.sh --uninstall
+```
+
+### With an agent (paste this prompt)
+
+> Install sag from https://github.com/nhatminh1512/sag on this machine without
+> `git clone`: download the `main` tarball into `~/.local/share/sag`, run
+> `chmod +x ~/.local/share/sag/sag.py`, symlink `~/.local/bin/sag` to it, then
+> run `sag --help` and report the absolute path of the installed command.
+
 ### With npx
 
 ```bash
@@ -375,6 +396,9 @@ orchestrator.py        seven steps, prompts, agent invocation, gates
 clis.py                CLI registry + argv builder (stdin/argv, model flags)
 recursion.py           task-level recursion: propose / probe / compose / reflect
 skills/<step>/SKILL.md one role card per step
+install.sh             one-line installer (no git clone)
+bin/sag.js             npx / npm launcher
+package.json           npm metadata for the launcher
 config.example.json    a complete example configuration
 tests/test_core.py     dependency-free tests for scoring and skill loading
 ```
