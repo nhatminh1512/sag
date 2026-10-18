@@ -25,6 +25,98 @@ plan.md    tests (RED)   diff.patch  review.md  verify.json memory/      improve
 
 ---
 
+## Install
+
+Requirements:
+
+- Python 3.10+
+- At least one supported agent CLI on `PATH`: `claude`, `grok`, `dsh`, `codex`,
+  `opencode`, `gemini`, `aider`, `qwen`, or `cursor-agent` — or any custom CLI
+  described in the step config
+- A git repository to work in
+
+### With npx
+
+```bash
+npx sag-cli --help
+npx sag-cli setup
+```
+
+Install it as a command:
+
+```bash
+npm install -g sag-cli
+```
+
+`npx github:nhatminh1512/sag` runs the latest `main` instead of the published
+release. npx carries only the launcher; Python 3.10+ must still be on `PATH`
+(`SAG_PYTHON` overrides the interpreter).
+
+### One line
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nhatminh1512/sag/main/install.sh | sh
+```
+
+Downloads the repo tarball (no git), installs to `~/.local/share/sag`, links
+`~/.local/bin/sag`, and checks that it runs.
+
+```bash
+SAG_HOME=/opt/sag SAG_BIN=~/.local/bin sh install.sh   # overrides
+sh install.sh --uninstall
+```
+
+### With an agent (paste this prompt)
+
+> Install sag from https://github.com/nhatminh1512/sag on this machine without
+> `git clone`: download the `main` tarball into `~/.local/share/sag`, run
+> `chmod +x ~/.local/share/sag/sag.py`, symlink `~/.local/bin/sag` to it, then
+> run `sag --help` and report the absolute path of the installed command.
+
+### From source
+
+```bash
+git clone git@github.com:nhatminh1512/sag.git
+cd sag
+ln -sf "$PWD/sag.py" ~/.local/bin/sag
+chmod +x sag.py
+sag --help
+```
+
+The CLIs keep their own credentials (`~/.claude/.credentials.json`, Grok login,
+`DEEPSEEK_API_KEY`). `sag` does not store secrets.
+
+---
+
+## Quick start
+
+```bash
+cd ~/code/my-project
+sag setup          # once: detects the CLIs, the test command, writes .sag/
+sag check          # preflight
+sag                # prompts for a task, then runs the pipeline
+```
+
+Non-interactive:
+
+```bash
+sag "Add a GET /health endpoint returning {\"ok\": true}" --auto
+```
+
+Review the result:
+
+```bash
+sag report
+```
+
+Try it without spending tokens:
+
+```bash
+sag demo           # dry-run of the whole flow
+```
+
+---
+
 ## Why another agent pipeline
 
 Three failure modes motivated it:
@@ -185,98 +277,6 @@ never a summary.
 - **Omitted-is-inherited, validate before adoption, fall back to the current
   harness** on an invalid proposal.
 - **CLI shape** — `setup → check → run → report`, with a credential-free demo.
-
----
-
-## Install
-
-Requirements:
-
-- Python 3.10+
-- At least one supported agent CLI on `PATH`: `claude`, `grok`, `dsh`, `codex`,
-  `opencode`, `gemini`, `aider`, `qwen`, or `cursor-agent` — or any custom CLI
-  described in the step config
-- A git repository to work in
-
-### One line
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nhatminh1512/sag/main/install.sh | sh
-```
-
-Downloads the repo tarball (no git), installs to `~/.local/share/sag`, links
-`~/.local/bin/sag`, and checks that it runs.
-
-```bash
-SAG_HOME=/opt/sag SAG_BIN=~/.local/bin sh install.sh   # overrides
-sh install.sh --uninstall
-```
-
-### With an agent (paste this prompt)
-
-> Install sag from https://github.com/nhatminh1512/sag on this machine without
-> `git clone`: download the `main` tarball into `~/.local/share/sag`, run
-> `chmod +x ~/.local/share/sag/sag.py`, symlink `~/.local/bin/sag` to it, then
-> run `sag --help` and report the absolute path of the installed command.
-
-### With npx
-
-```bash
-npx sag-cli --help
-npx sag-cli setup
-```
-
-Install it as a command:
-
-```bash
-npm install -g sag-cli
-```
-
-`npx github:nhatminh1512/sag` runs the latest `main` instead of the published
-release. npx carries only the launcher; Python 3.10+ must still be on `PATH`
-(`SAG_PYTHON` overrides the interpreter).
-
-### From source
-
-```bash
-git clone git@github.com:nhatminh1512/sag.git
-cd sag
-ln -sf "$PWD/sag.py" ~/.local/bin/sag
-chmod +x sag.py
-sag --help
-```
-
-The CLIs keep their own credentials (`~/.claude/.credentials.json`, Grok login,
-`DEEPSEEK_API_KEY`). `sag` does not store secrets.
-
----
-
-## Quick start
-
-```bash
-cd ~/code/my-project
-sag setup          # once: detects the CLIs, the test command, writes .sag/
-sag check          # preflight
-sag                # prompts for a task, then runs the pipeline
-```
-
-Non-interactive:
-
-```bash
-sag "Add a GET /health endpoint returning {\"ok\": true}" --auto
-```
-
-Review the result:
-
-```bash
-sag report
-```
-
-Try it without spending tokens:
-
-```bash
-sag demo           # dry-run of the whole flow
-```
 
 ---
 
