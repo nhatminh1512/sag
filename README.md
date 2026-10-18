@@ -1,5 +1,8 @@
 # sag
 
+[![npm](https://img.shields.io/npm/v/sag-cli.svg)](https://www.npmjs.com/package/sag-cli)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **One command per repo for a multi-agent coding pipeline.**
 
 ```bash
@@ -219,17 +222,18 @@ sh install.sh --uninstall
 ### With npx
 
 ```bash
-npx github:nhatminh1512/sag --help
-npx github:nhatminh1512/sag setup
+npx sag-cli --help
+npx sag-cli setup
 ```
 
 Install it as a command:
 
 ```bash
-npm install -g github:nhatminh1512/sag
+npm install -g sag-cli
 ```
 
-npx carries only the launcher; Python 3.10+ must still be on `PATH`
+`npx github:nhatminh1512/sag` runs the latest `main` instead of the published
+release. npx carries only the launcher; Python 3.10+ must still be on `PATH`
 (`SAG_PYTHON` overrides the interpreter).
 
 ### From source
