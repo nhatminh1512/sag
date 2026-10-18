@@ -5,33 +5,36 @@
   "steps": {
     "plan": {
       "cli": "claude",
+      "model": "sonnet",
       "permission": "acceptEdits"
     },
     "write-test": {
-      "cli": "grok",
-      "permission": "auto"
+      "cli": "grok"
     },
     "execute": {
-      "cli": "dsh",
-      "permission": "auto",
-      "model": "deepseek-flash"
+      "cli": "dsh"
     },
     "review": {
       "cli": "claude",
+      "model": "opus",
       "permission": "acceptEdits"
     },
     "verify": {
-      "cli": "grok",
-      "permission": "auto"
+      "cli": "grok"
     },
     "remember": {
       "cli": "none"
     },
     "improve": {
       "cli": "claude",
+      "model": "sonnet",
       "permission": "acceptEdits"
     }
   },
   "gates": ["execute"],
-  "timeout_s": 900
+  "timeout_s": 900,
+  "harness_dir": ".sag/harness",
+  "runs_dir": ".sag/runs",
+  "memory_dir": ".sag/memory",
+  "library_dir": ".sag/library"
 }

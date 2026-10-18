@@ -21,6 +21,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import orchestrator as orch  # noqa: E402
+import clis  # noqa: E402
 
 SAG = ".sag"
 STEPS = orch.STEPS
@@ -29,13 +30,13 @@ STEPS = orch.STEPS
 DEFAULTS = {
     "plan":       {"cli": "claude", "permission": "acceptEdits"},
     "write-test": {"cli": "grok",   "permission": "auto"},
-    "execute":    {"cli": "dsh",    "permission": "auto", "model": "deepseek-flash"},
+    "execute":    {"cli": "dsh",    "permission": "auto"},
     "review":     {"cli": "claude", "permission": "acceptEdits"},
     "verify":     {"cli": "grok",   "permission": "auto"},
     "remember":   {"cli": "none"},
     "improve":    {"cli": "claude", "permission": "acceptEdits"},
 }
-CLIS = ("claude", "grok", "dsh")
+CLIS = tuple(clis.REGISTRY)
 
 GUARDRAILS = {
     "max_skill_chars": 6000,
@@ -68,17 +69,31 @@ def find_project(start: Path) -> tuple[Path, Path] | None:
     return None
 
 
-def detect_clis() -> dict[str, str]:
-    return {name: (shutil.which(name) or "") for name in CLIS}
+def detect_clis():
+    """Every known agent CLI found on PATH: [(name, path, CliSpec), ...]."""
+    return clis.detect()
 
 
-def pick(cli: str, avail: dict[str, str]) -> str:
-    if avail.get(cli):
+def pick(cli: str, avail) -> str:
+    """Keep `cli` if it is installed, else the first installed CLI, else 'none'."""
+    if cli == "none":
+        return "none"
+    if cli in avail:
         return cli
-    for alt in CLIS:
-        if avail.get(alt):
+    for alt in clis.REGISTRY:
+        if alt in avail:
             return alt
     return "none"
+
+
+def parse_pairs(raw: str | None) -> dict[str, str]:
+    """`plan=codex,execute=dsh` -> {'plan': 'codex', 'execute': 'dsh'}."""
+    out: dict[str, str] = {}
+    for part in (raw or "").split(","):
+        if "=" in part:
+            k, v = part.split("=", 1)
+            out[k.strip()] = v.strip()
+    return out
 
 
 def detect_test_cmd(repo: Path) -> str:
@@ -130,6 +145,43 @@ def banner() -> str:
 
 
 # --------------------------------------------------------------------------- setup
+def choose_cli(step: str, default: str, found) -> str:
+    names = [n for n, _, _ in found]
+    while True:
+        raw = ask(f"{step:10} cli", default, [str(i) for i in range(1, len(found) + 1)] + ["c"])
+        if raw.isdigit() and 1 <= int(raw) <= len(found):
+            return found[int(raw) - 1][0]
+        if raw in names or raw == "c":
+            return raw
+        print(f"  unknown choice {raw!r}; enter a number, a CLI name, or 'c'")
+
+
+def ask_model(step: str, spec, default: str) -> str:
+    if spec is None:
+        return default
+    if not spec.model:
+        print(f"           ({spec.note or 'model is fixed by this CLI'})")
+        return ""
+    print(f"           models: {', '.join(spec.models) if spec.models else 'free text'}")
+    return ask(f"{step:10} model", default)
+
+
+def custom_cli(step: str) -> dict:
+    """A CLI that is not in the registry: describe its invocation once."""
+    name = ask(f"{step:10} name", "mycli")
+    binary = ask(f"{step:10} binary", name)
+    base = ask(f"{step:10} args (use {{prompt}} for the prompt)", "")
+    mode = "argv" if "{prompt}" in base else ask(f"{step:10} prompt mode", "stdin", ["stdin", "argv"])
+    mflag = ask(f"{step:10} model flag (empty = none)", "")
+    entry: dict = {"cli": name, "bin": binary, "base": base.split(), "prompt": mode}
+    if mflag:
+        entry["model_flag"] = mflag
+        model = ask(f"{step:10} model", "")
+        if model:
+            entry["model"] = model
+    return entry
+
+
 def cmd_setup(args) -> int:
     repo = git_root(Path.cwd()) or Path.cwd()
     sag = repo / SAG
@@ -137,11 +189,17 @@ def cmd_setup(args) -> int:
     print(f"repo: {repo}")
     print()
 
-    av = detect_clis()
-    print("CLIs:")
-    for name, path in av.items():
-        print(f"  {name:6} {'✓ ' + path if path else '✗ not found'}")
+    found = detect_clis()
+    by_name = {name for name, _, _ in found}
+    print("Detected agent CLIs:")
+    for i, (name, path, spec) in enumerate(found, 1):
+        hint = ", ".join(spec.models[:4]) or spec.note or "CLI default"
+        print(f"  {i}) {name:13} {path}  [{hint}]")
+    print("  c) custom CLI (binary + args + model flag)")
     print()
+
+    cli_over = parse_pairs(args.cli)
+    model_over = parse_pairs(args.model)
 
     test_cmd = args.test_cmd or detect_test_cmd(repo)
     if not args.yes:
@@ -150,18 +208,27 @@ def cmd_setup(args) -> int:
     steps: dict[str, dict] = {}
     for step in STEPS:
         d = DEFAULTS[step]
-        cli = d["cli"] if d["cli"] == "none" else pick(d["cli"], av)
-        if not args.yes:
-            avail = [c for c in CLIS if av[c]] or ["none"]
-            cli = ask(f"{step:10} cli", cli, avail)
-            if cli not in CLIS and cli != "none":
-                print(f"  (unknown cli {cli!r}; keeping {pick(d['cli'], av)})")
-                cli = pick(d["cli"], av)
-        entry = {"cli": cli}
-        if d.get("permission") and cli != "none":
-            entry["permission"] = d["permission"]
-        if d.get("model") and cli == d["cli"]:
-            entry["model"] = d["model"]
+        default_cli = d["cli"] if d["cli"] == "none" else pick(d["cli"], by_name)
+        cli = cli_over.get(step, default_cli)
+        spec = clis.resolve(cli)
+        default_model = d.get("model", "") if (spec and spec.model) else ""
+        model = model_over.get(step, default_model)
+
+        if not args.yes and cli != "none":
+            cli = choose_cli(step, cli, found)
+            if cli == "c":
+                steps[step] = custom_cli(step)
+                continue
+            spec = clis.resolve(cli)
+            model = ask_model(step, spec, model)
+
+        entry: dict = {"cli": cli}
+        if cli == "claude":
+            entry["permission"] = "acceptEdits"
+        if model:
+            entry["model"] = model
+        if cli == "none" and d["cli"] != "none":
+            print(f"  ({step}: no CLI available — this step will be skipped)")
         steps[step] = entry
 
     if sag.exists() and (sag / "config.json").exists() and not args.force:
@@ -231,8 +298,12 @@ def cmd_check(args) -> int:
         cli = s.get("cli")
         if cli in (None, "none"):
             continue
-        if not shutil.which(cli):
-            errs.append(f"{step}: cli {cli!r} not on PATH")
+        binary = s.get("bin") or cli
+        if not (shutil.which(binary) or Path(binary).exists()):
+            errs.append(f"{step}: {binary!r} not found (cli {cli!r})")
+        spec = clis.resolve(cli)
+        if s.get("model") and spec and not spec.model and not s.get("model_flag"):
+            warns.append(f"{step}: {cli} has no model flag; {s['model']!r} is ignored")
 
     tc = cfg.get("test_cmd", "").strip()
     if not tc:
@@ -276,6 +347,10 @@ def cmd_check(args) -> int:
         print(f"\n{len(errs)} issue(s). Fix them, then re-run `sag check`.")
         return 1
     print(f"Ready: {repo.name} · {len([s for s in cfg['steps'].values() if s.get('cli') not in (None,'none')])} agents · test: {tc}")
+    for step, s in cfg.get("steps", {}).items():
+        if s.get("cli") in (None, "none"):
+            continue
+        print(f"  {step:10} {s['cli']:13} {s.get('model') or 'CLI default'}")
     print("Model access is not exercised; the first real run is the first model call.")
     return 0
 
@@ -368,6 +443,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--force", action="store_true", help="overwrite an existing .sag config")
     s.add_argument("--test-cmd", help="override the detected test command")
     s.add_argument("--no-gates", action="store_true", help="run without human gates")
+    s.add_argument("--cli", help="per-step CLI overrides, e.g. plan=codex,execute=dsh")
+    s.add_argument("--model", help="per-step model overrides, e.g. plan=gpt-5")
 
     sub.add_parser("check", help="preflight the project harness")
 

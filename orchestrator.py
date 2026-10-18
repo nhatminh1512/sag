@@ -29,6 +29,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import clis
+
 ROOT = Path(__file__).resolve().parent
 STEPS = ["plan", "write-test", "execute", "review", "verify", "remember", "improve"]
 STATE_DIR = ROOT  # overridden by run_pipeline (per-project .sag dir)
@@ -84,18 +86,12 @@ def run_agent(step: str, cfg: dict, prompt: str, repo: Path, run_dir: Path) -> t
     env = load_env()
     (run_dir / "prompts").mkdir(exist_ok=True)
     (run_dir / "prompts" / f"{step}.md").write_text(prompt)
-
-    if cli == "claude":
-        mode = spec.get("permission", "plan")
-        cmd = ["claude", "-p", "--permission-mode", mode]
-        return run(cmd, repo, timeout, env, stdin_text=prompt)
-    if cli == "grok":
-        cmd = ["grok", "-p", prompt, "--always-approve"]
-        return run(cmd, repo, timeout, env)
-    if cli == "dsh":
-        cmd = ["dsh", "headless", "-"]
-        return run(cmd, repo, timeout, env, stdin_text=prompt)
-    return 2, f"[unknown cli] {cli}", 0.0
+    try:
+        argv, stdin_text = clis.build(spec, prompt, spec.get("model"))
+    except ValueError as exc:
+        return 2, f"[cli error] {exc}", 0.0
+    (run_dir / "prompts" / f"{step}.argv.json").write_text(json.dumps(argv, indent=2) + "\n")
+    return run(argv, repo, timeout, env, stdin_text=stdin_text)
 
 
 def git_diff(repo: Path) -> str:

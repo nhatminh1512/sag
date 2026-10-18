@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 import orchestrator as O  # noqa: E402
 import recursion as R  # noqa: E402
+import clis  # noqa: E402
 
 
 def make_run(root: Path, name: str, *, verify_pass: bool, review: str, tests: str) -> Path:
@@ -94,6 +95,39 @@ class SkillTests(unittest.TestCase):
     def test_role_cards_are_small(self) -> None:
         for step in O.STEPS:
             self.assertLess(len(O.skill(step)), 6000, f"{step} skill is over the cap")
+
+
+class CliTests(unittest.TestCase):
+    def test_claude_uses_stdin_and_model_flag(self) -> None:
+        argv, stdin = clis.build(
+            {"cli": "claude", "permission": "acceptEdits", "model": "sonnet"},
+            "PROMPT", "sonnet")
+        self.assertEqual(argv, ["claude", "-p", "--permission-mode", "acceptEdits",
+                                "--model", "sonnet"])
+        self.assertEqual(stdin, "PROMPT")
+
+    def test_grok_keeps_prompt_right_after_dash_p(self) -> None:
+        argv, stdin = clis.build({"cli": "grok", "model": "grok-4"}, "PROMPT", "grok-4")
+        self.assertEqual(argv, ["grok", "-p", "PROMPT", "--always-approve",
+                                "-m", "grok-4"])
+        self.assertIsNone(stdin)
+
+    def test_dsh_reads_stdin_and_ignores_model(self) -> None:
+        argv, stdin = clis.build({"cli": "dsh", "model": "x"}, "PROMPT", "x")
+        self.assertEqual(argv, ["dsh", "headless", "-"])
+        self.assertEqual(stdin, "PROMPT")
+
+    def test_custom_cli_is_fully_described_by_config(self) -> None:
+        argv, stdin = clis.build(
+            {"cli": "mycli", "bin": "/opt/mycli", "base": ["run", "{prompt}"],
+             "prompt": "argv", "model_flag": "--model"},
+            "PROMPT", "m1")
+        self.assertEqual(argv, ["/opt/mycli", "run", "PROMPT", "--model", "m1"])
+        self.assertIsNone(stdin)
+
+    def test_unknown_cli_without_base_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            clis.build({"cli": "nope"}, "PROMPT")
 
 
 if __name__ == "__main__":

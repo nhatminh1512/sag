@@ -9,9 +9,10 @@ sag
 
 `sag` takes one task and runs it through seven named agents — plan, write-test,
 execute, review, verify, remember, improve — each backed by a different CLI
-(Claude Code, Grok, or DeepSeek Harness). Every handoff is a file on disk, every
-step has a self-check, and the harness itself can be improved by running the
-same task through candidate harnesses and keeping the one that behaves best.
+(Claude Code, Grok, DeepSeek Harness, Codex, Gemini, or any custom CLI). Every
+handoff is a file on disk, every step has a self-check, and the harness itself
+can be improved by running the same task through candidate harnesses and keeping
+the one that behaves best.
 
 ```
 plan ──▶ write-test ──▶ execute ──▶ review ──▶ verify ──▶ remember ──▶ improve
@@ -42,15 +43,18 @@ Three failure modes motivated it:
 
 ### The seven steps
 
-| # | Step | Agent | Output | Self-check before handing off |
+| # | Step | Default CLI (configurable) | Output | Self-check before handing off |
 |---|---|---|---|---|
-| 1 | `plan` | Claude, read-only | `plan.md` — goal, steps, files, feature criteria, regression criteria, risks | every required section present; criteria are testable |
-| 2 | `write-test` | Grok, independent of the executor | test + `test-plan.md` | the repo's real test command must **fail** (test is wired in and RED) |
-| 3 | `execute` | DeepSeek Harness | code + `diff.patch` + `execution.md` | the diff is non-empty and the suite passes |
-| 4 | `review` | Claude, fresh context | `review.md` — `APPROVE` or `REQUEST_CHANGES` | verdict + blocking issues with `file:line` |
-| 5 | `verify` | Grok + the real test run | `verify.json` — per-criterion evidence | verdict must agree with review; a `REQUEST_CHANGES` review forces `pass: false` |
+| 1 | `plan` | `claude` | `plan.md` — goal, steps, files, feature criteria, regression criteria, risks | every required section present; criteria are testable |
+| 2 | `write-test` | `grok` (independent of the executor) | test + `test-plan.md` | the repo's real test command must **fail** (test is wired in and RED) |
+| 3 | `execute` | `dsh` (DeepSeek Harness) | code + `diff.patch` + `execution.md` | the diff is non-empty and the suite passes |
+| 4 | `review` | `claude` (fresh context) | `review.md` — `APPROVE` or `REQUEST_CHANGES` | verdict + blocking issues with `file:line` |
+| 5 | `verify` | `grok` + the real test run | `verify.json` — per-criterion evidence | verdict must agree with review; a `REQUEST_CHANGES` review forces `pass: false` |
 | 6 | `remember` | deterministic | `memory/decisions.md`, `lessons.md`, `context.md` | runs without a model call |
-| 7 | `improve` | Claude, meta-agent | `improve.md`, `memory/improvements.md` | concrete SOP edits, not generalities |
+| 7 | `improve` | `claude` (meta-agent) | `improve.md`, `memory/improvements.md` | concrete SOP edits, not generalities |
+
+Every CLI and model is chosen at `sag setup`; the defaults above are one working
+combination, not a requirement.
 
 ### Handoff is files, not transcripts
 
@@ -95,7 +99,7 @@ editable components as separate surfaces instead of one prompt blob:
 | System prompt | the per-step `SKILL.md` body injected into the prompt |
 | Guardrails | `guardrails.json` + the self-checks in `orchestrator.py` |
 | Memory | `.sag/memory/` (decisions, lessons, context, improvements) |
-| Tool guidance | the CLI invocation contract in `orchestrator.py` (`claude -p`, `grok -p`, `dsh headless`) |
+| Tool guidance | `clis.py` — the per-CLI argv contract (stdin/argv, model flag) |
 | Subagents | one named agent per step |
 | Skills | `.sag/harness/skills/<step>/SKILL.md` |
 | Scripts | `sag.py`, `orchestrator.py`, `recursion.py` |
@@ -179,11 +183,6 @@ never a summary.
   harness** on an invalid proposal.
 - **CLI shape** — `setup → check → run → report`, with a credential-free demo.
 
-### GSD
-
-- Setup once per project, then a single command in that directory:
-  `cd repo && sag`, the same rhythm as `claude` or `grok`.
-
 ---
 
 ## Install
@@ -191,7 +190,9 @@ never a summary.
 Requirements:
 
 - Python 3.10+
-- At least one of: `claude`, `grok`, `dsh` on `PATH`
+- At least one supported agent CLI on `PATH`: `claude`, `grok`, `dsh`, `codex`,
+  `opencode`, `gemini`, `aider`, `qwen`, or `cursor-agent` — or any custom CLI
+  described in the step config
 - A git repository to work in
 
 ```bash
@@ -236,11 +237,59 @@ sag demo           # dry-run of the whole flow
 
 ---
 
+## Choosing CLIs and models
+
+`sag setup` scans `PATH` for every supported CLI and shows what it found:
+
+```
+Detected agent CLIs:
+  1) claude  /home/you/.local/bin/claude  [opus, sonnet, haiku]
+  2) grok    /home/you/.local/bin/grok    [grok-4, grok-3]
+  3) dsh     /home/you/.local/bin/dsh     [model comes from the active dsh profile]
+  c) custom CLI (binary + args + model flag)
+```
+
+For each of the seven steps it then asks for:
+
+1. **CLI** — a number or a name.
+2. **Model** — free text; the bracketed list is a hint, Enter keeps the CLI
+   default. CLIs without a model flag (for example `dsh`) skip the question and
+   say why.
+
+Non-interactive setup:
+
+```bash
+sag setup --yes \
+  --cli "plan=codex,execute=dsh,review=claude" \
+  --model "plan=gpt-5,review=opus"
+```
+
+Custom CLI — anything not in the registry:
+
+```
+c
+  name: mycli
+  binary: /opt/mycli
+  args: run {prompt}       # {prompt} = "pass the prompt here"; empty = stdin
+  model flag: --model
+  model: m1
+```
+
+That writes a self-contained step config:
+
+```json
+{"cli": "mycli", "bin": "/opt/mycli", "base": ["run", "{prompt}"],
+ "prompt": "argv", "model_flag": "--model", "model": "m1"}
+```
+
+The exact command line is recorded per run in
+`runs/<id>/prompts/<step>.argv.json`, so every CLI/model choice is auditable.
+
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `sag setup` | Interactive setup for this repo. `--yes`, `--force`, `--test-cmd "..."`, `--no-gates` |
+| `sag setup` | Interactive setup for this repo. `--yes`, `--force`, `--test-cmd "..."`, `--no-gates`, `--cli "plan=codex,..."`, `--model "plan=gpt-5,..."` |
 | `sag check` | Preflight: git, CLIs, test command, seven skills, guardrail caps |
 | `sag` | Prompt for a task and run all seven steps |
 | `sag "task"` | Run with the task given |
@@ -287,9 +336,15 @@ sag demo           # dry-run of the whole flow
 
 - `test_cmd` is the repo's **real** test command. It is what proves the test is
   RED before `execute` and green after it.
-- `cli` is `claude`, `grok`, `dsh`, or `none`.
-- `permission` is passed to `claude` (`acceptEdits` for steps that must write
-  files; `plan` is read-only).
+- `cli` is any name in the registry (`claude`, `grok`, `dsh`, `codex`,
+  `opencode`, `gemini`, `aider`, `qwen`, `cursor-agent`) or a custom name, or
+  `none` to skip the step.
+- `model` is passed to that CLI's model flag. Free text; empty means the CLI
+  default. `dsh` has no model flag — its model comes from the active profile.
+- `permission` is passed to `claude` as `--permission-mode` (`acceptEdits` for
+  steps that must write files; `plan` is read-only).
+- A custom CLI adds `bin`, `base`, `prompt` (`stdin`/`argv`), and `model_flag`.
+  `base` is the argv template; `{prompt}` marks where the prompt goes.
 - `gates` lists the steps that stop for a human.
 
 ---
@@ -299,6 +354,7 @@ sag demo           # dry-run of the whole flow
 ```
 sag.py                 CLI: setup / check / run / report / demo
 orchestrator.py        seven steps, prompts, agent invocation, gates
+clis.py                CLI registry + argv builder (stdin/argv, model flags)
 recursion.py           task-level recursion: propose / probe / compose / reflect
 skills/<step>/SKILL.md one role card per step
 config.example.json    a complete example configuration
@@ -328,7 +384,9 @@ python3 -m unittest discover -s tests -v
 ## Limitations
 
 - Sequential, one task at a time.
-- Adapters only for the headless modes of `claude`, `grok`, and `dsh`.
+- Built-in adapters cover the headless modes of the registry above. A custom CLI
+  is described in config, but its flags are not verified for you — check
+  `<cli> --help` and `runs/<id>/prompts/<step>.argv.json`.
 - A probe re-runs real model calls, so recursion costs money and time. With the
   default assignment, `write-test` (Grok) is the slow step — budget ~15 minutes.
 - The library is local to the repo; it is not shared across projects.
