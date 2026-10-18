@@ -1,6 +1,6 @@
-# Hướng dẫn sử dụng `factory`
+# Hướng dẫn sử dụng `sag`
 
-`factory` là pipeline 7 bước cho một task code:
+`sag` là pipeline 7 bước cho một task code:
 
 ```
 plan → write-test → execute → review → verify → remember → improve
@@ -25,7 +25,7 @@ có self-check trước khi chuyển bước. Một process "Chief of Staff"
 Kiểm tra nhanh:
 
 ```bash
-cd ~/factory
+cd ~/sag
 python3 orchestrator.py --help
 claude --version && grok --version && dsh --version
 ```
@@ -35,7 +35,7 @@ claude --version && grok --version && dsh --version
 ## 2. Chạy nhanh
 
 ```bash
-cd ~/factory
+cd ~/sag
 
 # xem trước flow, không gọi AI
 python3 orchestrator.py "Add a GET /ping endpoint" --repo /path/to/repo --dry-run
@@ -44,13 +44,13 @@ python3 orchestrator.py "Add a GET /ping endpoint" --repo /path/to/repo --dry-ru
 python3 orchestrator.py "Add a GET /ping endpoint" --repo /path/to/repo --auto
 ```
 
-Mặc định `repo` lấy từ `config.json` (`/home/nhat/squadflow`). Nên chạy trên
+Mặc định `repo` lấy từ `config.json` (`/path/to/your/repo`). Nên chạy trên
 **bản copy** nếu không muốn repo thật bị thay đổi:
 
 ```bash
-cp -a /home/nhat/squadflow /tmp/factory_run
-cd ~/factory
-python3 orchestrator.py "Add a GET /ping endpoint" --repo /tmp/factory_run --auto
+cp -a /path/to/your/repo /tmp/sag_run
+cd ~/sag
+python3 orchestrator.py "Add a GET /ping endpoint" --repo /tmp/sag_run --auto
 ```
 
 ---
@@ -176,7 +176,7 @@ theo, và chính bước `improve` sẽ đề xuất nó.
 
 ```json
 {
-  "repo": "/home/nhat/squadflow",
+  "repo": "/path/to/your/repo",
   "test_cmd": ".venv/bin/python test_regressions.py",
   "steps": {
     "plan":       {"cli": "claude", "permission": "acceptEdits", "model": "claude"},
@@ -209,7 +209,7 @@ theo, và chính bước `improve` sẽ đề xuất nó.
 Mỗi bước có một **role card** riêng tại:
 
 ```
-~/factory/skills/<step>/SKILL.md
+~/sag/skills/<step>/SKILL.md
   plan/  write-test/  execute/  review/  verify/  remember/  improve/
 ```
 
@@ -228,7 +228,7 @@ Lưu ý: đây là skill **của orchestrator**. Mỗi CLI còn có skill system
 ## 9. Output ở đâu
 
 ```
-~/factory/runs/<timestamp>/
+~/sag/runs/<timestamp>/
   task.txt
   prompts/<step>.md        prompt chính xác đã gửi cho agent
   log.jsonl                rc + thời gian + đuôi output mỗi bước
@@ -242,7 +242,7 @@ Lưu ý: đây là skill **của orchestrator**. Mỗi CLI còn có skill system
   test-output.txt
   improve.md
 
-~/factory/memory/
+~/sag/memory/
   decisions.md             quyết định qua các run
   lessons.md               lỗi + bài học
   context.md               context repo

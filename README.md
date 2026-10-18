@@ -13,6 +13,8 @@ execute, review, verify, remember, improve — each backed by a different CLI
 step has a self-check, and the harness itself can be improved by running the
 same task through candidate harnesses and keeping the one that behaves best.
 
+> Vietnamese walkthrough: [HUONG_DAN_SU_DUNG.md](HUONG_DAN_SU_DUNG.md)
+
 ```
 plan ──▶ write-test ──▶ execute ──▶ review ──▶ verify ──▶ remember ──▶ improve
 Claude     Grok          DeepSeek    Claude     Grok       code         Claude
