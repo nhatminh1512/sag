@@ -1,6 +1,7 @@
 # sag
 
 [![npm](https://img.shields.io/npm/v/sag-cli.svg)](https://www.npmjs.com/package/sag-cli)
+[![tests](https://github.com/nhatminh1512/sag/actions/workflows/tests.yml/badge.svg)](https://github.com/nhatminh1512/sag/actions/workflows/tests.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **One command per repo for a multi-agent coding pipeline.**
